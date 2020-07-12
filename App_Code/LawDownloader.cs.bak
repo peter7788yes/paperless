@@ -1,0 +1,320 @@
+﻿using PaperLess_Emeeting.App_Code.DownloadItem;
+using PaperLess_Emeeting.App_Code.Tools;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading;
+using System.Windows.Threading;
+
+namespace PaperLess_Emeeting.App_Code.WS
+{
+    public delegate void LawListCT_DownloadFileStart_Function(Law_DownloadItemViewModel obj);
+    public delegate void LawListCT_DownloadProgressChanged_Function(Law_DownloadItemViewModel obj);
+    public delegate void LawListCT_DownloadFileCompleted_Function(Law_DownloadItemViewModel obj);
+
+    public delegate void LawListCT_UnZip_Function(Law_DownloadItemViewModel obj);
+    public delegate void LawListCT_UnZipError_Function(Law_DownloadItemViewModel obj);
+
+    public class LawDownloader
+    {
+        // 多執行緒，lock 使用
+        private static readonly object thisLock = new object();
+
+        public event LawListCT_DownloadFileStart_Function LawListCT_DownloadFileStart_Event;
+        public event LawListCT_DownloadProgressChanged_Function LawListCT_DownloadProgressChanged_Event;
+        public event LawListCT_DownloadFileCompleted_Function LawListCT_DownloadFileCompleted_Event;
+
+        public event LawListCT_UnZip_Function LawListCT_UnZip_Event;
+        public event LawListCT_UnZipError_Function LawListCT_UnZipError_Event;
+
+        private int buffer = 1024 * 1000; //1MB
+        private Queue<Law_DownloadItemViewModel> queue = new Queue<Law_DownloadItemViewModel>();
+        private List<Law_DownloadItemViewModel> list = new List<Law_DownloadItemViewModel>();
+        
+        public bool InDownloading = false;
+        private bool StopDownload = false; 
+
+        public Law_DownloadItemViewModel NowLawItem { get; private set; }
+
+        //建構子
+        public LawDownloader()
+        {
+        }
+
+        //這裡的Start請開執行序去跑
+        public void Start()
+        {
+            
+            //queue //一次把List的物件全部放在queue中;
+            //queue 裡的物件 會一直變動
+
+            //只要list中有物件，就一直跑回圈
+            //if (list.Count > 0)
+            //{
+                InDownloading = true;
+                // 多執行序可能會用同一個物件，所以先lock住
+                lock (thisLock)
+                {
+                    queue.Clear();
+                    foreach (Law_DownloadItemViewModel item in list)
+                    {
+                        queue.Enqueue(item);
+                        break;
+                    }
+                }
+
+                //有任何物件就下載
+                if (queue.Any())
+                {
+                    // 多執行序可能會用同一個物件，所以先lock住
+                    lock (thisLock)
+                    {
+                        NowLawItem = queue.Dequeue();                               //假設是URL
+                        list.Remove(NowLawItem);
+                    }
+
+                    DownloadFileStart(NowLawItem); //開始
+                    
+                    HttpWebRequest request = (HttpWebRequest)FileWebRequest.Create(NowLawItem.Link);
+                    if (NowLawItem.DownloadBytes > 0)
+                    {
+                        request.AddRange(NowLawItem.DownloadBytes);
+                    }
+
+                    //做非同步
+                    //request.BeginGetResponse(ar =>
+                    //{
+                        //把fileItem傳進來
+                        //取得回應
+                        //WebResponse response = request.EndGetResponse(ar);
+                        WebResponse response = request.GetResponse();
+
+                        NowLawItem.TotalBytes = response.ContentLength;
+                        
+                        //先建立檔案要存放的資料夾
+                        Directory.CreateDirectory(NowLawItem.StorageFileFolder);
+                        using (var writer = new FileStream(NowLawItem.StorageFilePath, FileMode.OpenOrCreate))
+                        {
+                            using (var stream = response.GetResponseStream())
+                            {
+                                while (NowLawItem.DownloadBytes < NowLawItem.TotalBytes)  //暫停條件設定成 fileItem的屬性 IsPause =true 就停止
+                                {
+                                    if (StopDownload == true)
+                                    {
+                                        // 多執行序可能會用同一個物件，所以先lock住
+                                        lock (thisLock)
+                                        {
+                                            NowLawItem = null;
+                                            queue.Clear();
+                                            list.Clear();
+                                            StopDownload = false;
+                                            InDownloading = false;
+                                        }
+                                        return;
+                                    }
+                                    byte[] data = new byte[buffer];
+                                    int readNumber = stream.Read(data, 0, data.Length);
+                                    if (readNumber > 0)
+                                    {
+                                        writer.Write(data, 0, readNumber);
+                                        NowLawItem.DownloadBytes += readNumber;
+                                    }
+
+                                    if (NowLawItem.DownloadBytes == NowLawItem.TotalBytes)
+                                    {
+                                        //DownloadProgressChanged(NowLawItem); //呼叫百分比
+                                        writer.Flush();
+                                        goto FINISH;
+                                    }
+                                    else
+                                    {
+                                        double percentage = GetPercent(NowLawItem.DownloadBytes, NowLawItem.TotalBytes);
+                                        if (percentage - NowLawItem.NowPercentage > 1)
+                                        {
+                                            NowLawItem.NowPercentage = percentage;
+                                            DownloadProgressChanged(NowLawItem); //呼叫百分比
+                                            writer.Flush();
+                                        }
+                                    }
+                                 }
+                              }
+                          }
+
+                         FINISH:
+                            DownloadFileCompleted(NowLawItem); //完成
+
+                    //}, null ); //null這裡可以傳入 fileItem 封裝後的物件
+                }
+
+            //}
+
+            // 設定成 沒有正在下載 和 沒有正在下載的物件
+            InDownloading = false;
+            NowLawItem = null;
+
+            //不同線程的回呼，不會造成Recursive堆疊上限
+            LawDownloader lawDownloader = Singleton_LawDownloader.GetInstance();
+            if (lawDownloader.InDownloading == false)
+            {
+                ThreadPool.QueueUserWorkItem(callback => { lawDownloader.Start(); });
+
+                //Thread th = new Thread(() =>
+                //{
+                //    lawDownloader.Start();
+                //});
+                //th.IsBackground = true;
+                //th.Start();
+            }
+        }
+
+        public void AddItem(Law_DownloadItemViewModel lawItem)
+        {
+            lock (this)
+            {
+                list.Add(lawItem);
+            }
+        }
+
+        public void Stop()
+        {
+            StopDownload = true;
+          
+        }
+
+        public Law_DownloadItemViewModel GetInList(string lawDataLawID)
+        {
+            if (NowLawItem!=null && NowLawItem.ID.Equals(lawDataLawID))
+                return NowLawItem;
+            else
+                return list.Where(x => x.ID.Equals(lawDataLawID)).FirstOrDefault();
+        }
+
+        private double GetPercent(double downloadBytes, double totalBytes)
+        {
+            double percentage = 0.0;
+            if (totalBytes > 0)
+                percentage = downloadBytes * 100 / totalBytes;
+
+            return percentage;
+        }
+
+        private void DownloadFileStart(Law_DownloadItemViewModel lawItem)
+        {
+            if (lawItem == null)
+                return;
+
+            if(lawItem.StorageFileName.EndsWith(".update"))
+                lawItem.FileType = LawFileType.更新檔正在下載中;
+            else
+                lawItem.FileType = LawFileType.正在下載中;
+
+            //呼叫完成event並且在主執行序執行
+            if (LawListCT_DownloadFileStart_Event != null)
+                LawListCT_DownloadFileStart_Event(lawItem);
+
+
+        }
+
+
+        private void DownloadProgressChanged(Law_DownloadItemViewModel lawItem)
+        {
+            if (lawItem == null)
+                return;
+
+            //呼叫完成event並且在主執行序執行
+            if (LawListCT_DownloadProgressChanged_Event!=null)
+                LawListCT_DownloadProgressChanged_Event(lawItem);
+           
+        }
+
+        private void DownloadFileCompleted(Law_DownloadItemViewModel lawItem)
+        {
+            if (lawItem == null)
+                return;
+
+
+            if (lawItem.StorageFileName.EndsWith(".update"))
+            {
+                lawItem.FileType = LawFileType.更新檔已下載完成;
+                //複寫原本的檔案
+                File.Move(lawItem.StorageFilePath, lawItem.StorageFilePath.Replace(".update",""));
+                lawItem.StorageFileName = lawItem.StorageFileName.Replace(".update", "");
+            }
+            else
+                lawItem.FileType = LawFileType.已下載完成;
+
+            //解壓縮
+            UnzipTrigger(lawItem);
+
+
+            string SQL=@"update  LawRow set AtDownloadFinished_XmlUpDate=@1
+                       , Link=@2,StorageFileName=@3
+                       , DownloadBytes=@4,TotalBytes=@5 where ID=@6 and UserID=@7";
+
+            int success = MSCE.ExecuteNonQuery( SQL
+                                               , lawItem.UpDate.ToString("yyyy/MM/dd HH:mm:ss")
+                                               , lawItem.Link
+                                               , lawItem.StorageFileName
+                                               , lawItem.DownloadBytes.ToString()
+                                               , lawItem.TotalBytes.ToString()
+                                               , lawItem.ID
+                                               , lawItem.UserID);
+            if (success < 1 )
+                LogTool.Debug(new Exception("DB失敗:" + SQL));
+
+        }
+
+        private void UnzipTrigger(Law_DownloadItemViewModel lawItem)
+        {
+            if (lawItem == null)
+                return;
+
+            bool success=false;
+
+            if (LawListCT_UnZip_Event != null)
+                LawListCT_UnZip_Event(lawItem);
+
+            UnZipTool uz = new UnZipTool();
+            success=uz.UnZip(lawItem.StorageFilePath,lawItem.UnZipFilePath,"",true);
+            if (success == true)
+            {
+                if (LawListCT_DownloadFileCompleted_Event != null)
+                    LawListCT_DownloadFileCompleted_Event(lawItem);
+            }
+            else
+            {
+                if (LawListCT_UnZipError_Event != null)
+                    LawListCT_UnZipError_Event(lawItem);
+
+                //寫DB
+                string SQL = @"update  LawRow set AtDownloadFinished_XmlUpDate=@1
+                                       , Link=@2,StorageFileName=@3
+                                       , DownloadBytes=@4,TotalBytes=@5 where ID=@6 and UserID=@7";
+                lawItem.DownloadBytes = 0;
+                lawItem.TotalBytes = 0;
+                int successNum = MSCE.ExecuteNonQuery(SQL
+                                                   , lawItem.UpDate.ToString("yyyy/MM/dd HH:mm:ss")
+                                                   , lawItem.Link
+                                                   , lawItem.StorageFileName
+                                                   , lawItem.DownloadBytes.ToString()
+                                                   , lawItem.TotalBytes.ToString()
+                                                   , lawItem.ID
+                                                   , lawItem.UserID);
+                if (successNum < 1)
+                {
+
+               
+                    LogTool.Debug(new Exception("DB失敗:" + SQL));
+                }
+            }
+
+
+        }
+       
+
+       
+    }
+}

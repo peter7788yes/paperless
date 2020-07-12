@@ -1,0 +1,871 @@
+﻿using CACodec;
+using PXCView36;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+namespace PaperLess_Emeeting
+{
+    public class ReadPagePair
+    {
+        public event EventHandler<imageSourceRenderedResultEventArgs> leftImageSourceRendered;
+        public event EventHandler<imageSourceRenderedResultEventArgs> rightImageSourceRendered;
+        private event EventHandler<imageSourceRenderedResultEventArgs> resizeImageSourceRendered;
+        public event EventHandler<imageSourceRenderedResultEventArgs> sendresizeImageSourceRendered;
+
+        public int leftPageIndex;
+        public int rightPageIndex;
+        public ImageStatus imgStatus;
+
+        public string leftImagePath;
+        public string rightImagePath;
+
+        public string leftPageId;
+        public string rightPageId;
+
+        public ImageSource leftImageSource;
+        public ImageSource rightImageSource;
+        public ImageSource resizedImageSource;
+
+        public byte[][] decodedPDFPages = new byte[2][]; //放已解密的PDF byte array, [0] 單頁或左頁、[1] 右頁
+
+        private int PDFdpi = 96;
+
+        public float PDFScale = 1.0F;
+        public double baseScale = 1;
+        public int zoomStep = 0;
+        public bool isRendering = false;
+        public List<Thread> zoomThread = new List<Thread>();
+        private DateTime lastTimeOfZooming;
+        private bool isResizing = false;
+
+        public ReadPagePair(int leftPageIndex, int rightPageIndex, string leftImgPath, string rightImgPath, string _leftPageId, string _rightPageId, int PDFdpi)
+        {
+            this.PDFdpi = PDFdpi;
+            this.leftPageIndex = leftPageIndex;
+            this.rightPageIndex = rightPageIndex;
+            this.imgStatus = ImageStatus.SMALLIMAGE;
+            this.leftImagePath = leftImgPath;
+            this.rightImagePath = rightImgPath;
+
+            this.leftPageId = _leftPageId;
+            this.rightPageId = _rightPageId;
+        }
+
+        public void resizeLargePHEJBitmapImage(CACodecTools caTool, byte[] curKey, Border border, float PDFScale, int zoomStep, DateTime resizeTime, bool isSinglePage)
+        {
+            this.lastTimeOfZooming = resizeTime;
+            this.PDFScale = PDFScale;
+            this.zoomStep = zoomStep;
+
+            if (leftImagePath.Length > 0)
+            {
+                if (rightImagePath.Length > 0)
+                {
+                    //左右都有圖
+                    Thread thread = new Thread(() => getPHEJDoubleBitmapImageAsync(caTool, curKey, leftImagePath, rightImagePath, PDFScale, leftPageIndex, border, zoomimageSourceRendered, isSinglePage));
+                    thread.Name = PDFScale.ToString();
+                    zoomThread.Add(thread);
+                }
+                else
+                {
+                    //只有左圖
+                    Thread thread = new Thread(() => getPHEJSingleBitmapImageAsync(caTool, curKey, leftImagePath, PDFScale, leftPageIndex, border, zoomimageSourceRendered, isSinglePage));
+                    thread.Name = PDFScale.ToString();
+                    zoomThread.Add(thread);
+                }
+            }
+            else if (rightImagePath.Length > 0)
+            {
+                //只有右圖
+                Thread thread = new Thread(() => getPHEJSingleBitmapImageAsync(caTool, curKey, rightImagePath, PDFScale, leftPageIndex, border, zoomimageSourceRendered, isSinglePage));
+                thread.Name = PDFScale.ToString();
+                zoomThread.Add(thread);
+            }
+
+
+            if (!zoomThread.Count.Equals(0) && !isResizing)
+            {
+                for (int i = zoomThread.Count - 1; i >= 0; i--)
+                {
+                    if (PDFScale.Equals(((float)Convert.ToDouble(zoomThread[i].Name))))
+                    {
+                        try
+                        {
+                            this.resizeImageSourceRendered += zoomimageSourceRendered;
+                            zoomThread[i].Start();
+                            zoomThread.Clear();
+                            isResizing = true;
+                            break;
+                        }
+                        catch
+                        {
+                            //該Thread執行中, 抓下一個Thread測試
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
+        public void createLargeHEJBitmapImage(CACodecTools caTool, byte[] curKey)
+        {
+            if (leftImagePath.Length > 0)
+            {
+                if (rightImagePath.Length > 0)
+                {
+                    //左右都有圖
+                    this.leftImageSource = getHEJDoubleBitmapImage(caTool, curKey);
+                }
+                else
+                {
+                    //只有左圖
+                    this.leftImageSource = getHEJSingleBitmapImage(caTool, curKey);
+                }
+            }
+            else if (rightImagePath.Length > 0)
+            {
+                //只有右圖
+                this.rightImageSource = getHEJSingleBitmapImage(caTool, curKey);
+            }
+        }
+
+        public void createLargePHEJBitmapImage(CACodecTools caTool, byte[] curKey, Border border, bool isSinglePage)
+        {
+            if (leftImagePath.Length > 0)
+            {
+                if (rightImagePath.Length > 0)
+                {
+                    //左右都有圖
+                    this.leftImageSourceRendered += leftimageSourceRendered;
+                    Thread thread = new Thread(() => getPHEJDoubleBitmapImageAsync(caTool, curKey, leftImagePath, rightImagePath, PDFScale, leftPageIndex, border, leftimageSourceRendered, isSinglePage));
+                    thread.Name = PDFScale.ToString();
+                    thread.Start();
+                    isRendering = true;
+
+                }
+                else
+                {
+                    //只有左圖
+                    this.leftImageSourceRendered += leftimageSourceRendered;
+                    Thread thread = new Thread(() => getPHEJSingleBitmapImageAsync(caTool, curKey, leftImagePath, PDFScale, leftPageIndex, border, leftimageSourceRendered, isSinglePage));
+                    thread.Name = PDFScale.ToString();
+                    thread.Start();
+                    isRendering = true;
+                }
+            }
+            else if (rightImagePath.Length > 0)
+            {
+                //只有右圖
+                this.rightImageSourceRendered += rightimageSourceRendered;
+                Thread thread = new Thread(() => getPHEJSingleBitmapImageAsync(caTool, curKey, rightImagePath, PDFScale, leftPageIndex, border, leftimageSourceRendered, isSinglePage));
+                thread.Name = PDFScale.ToString();
+                thread.Start();
+                isRendering = true;
+            }
+        }
+
+        #region PDF Reading Pages
+
+        public class NativeMethods
+        {
+            [DllImport("ole32.dll")]
+            public static extern void CoTaskMemFree(IntPtr pv);
+
+            [DllImport("ole32.dll")]
+            public static extern IntPtr CoTaskMemAlloc(IntPtr cb);
+
+            [DllImport("libpdf2jpg.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)]
+            public static extern IntPtr pdfLoadFromMemory(int dpi, float scale, IntPtr ibuf, int ilen, IntPtr obptr, IntPtr olptr, int pgs);
+
+            [DllImport("libpdf2jpg.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)]
+            public static extern int pdfNumberOfPages(IntPtr ibuf, int pgs);
+
+            [DllImport("libpdf2jpg.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)]
+            public static extern int pdfPageSize(int dpi, float scale, IntPtr ibuf, int ilen, IntPtr pWidth, IntPtr pHeight, int pgs);
+
+            [DllImport("libpdf2jpg.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)]
+            public static extern IntPtr pdfLoadFromMemoryPartial(int dpi, float scale, IntPtr ibuf, int ilen, IntPtr obptr, IntPtr olptr, int x0, int y0, int x1, int y1,
+            int pgs);
+        }
+
+        #region Paperless Meeting
+
+        //將 PDF ren 成 Bitmap (改用Thread的方式ren)
+        private Bitmap renPdfToBitmap(CACodecTools caTool, string pageFile, byte[] key, int pg, int dpi, float scal, int decodedPageIndex, Border border, bool isSinglePage)
+        {
+            System.Drawing.Color bgColor = System.Drawing.Color.White; //背景白色
+            Bitmap bmp = null;
+            try
+            {
+                if (this.decodedPDFPages[decodedPageIndex] == null) //如果此頁已經解密過，就直接拿來ren，不用再重新解密一次
+                    this.decodedPDFPages[decodedPageIndex] = caTool.fileAESDecode(pageFile, key);
+            }
+            catch (Exception e)
+            {
+                //TODO: 萬一檔案解析失敗, 判定為壞檔, 重新下載
+                this.decodedPDFPages[decodedPageIndex] = null;
+                LogTool.Debug(e);
+                //throw e;
+            }
+
+            try
+            {   //TODO: 改成把PDF實體拉出來變global的
+                PDFDoc pdfDoc = new PDFDoc();
+                pdfDoc.Init("PVD20-M4IRG-QYZK9-MNJ2U-DFTK1-MAJ4L", "PDFX3$Henry$300604_Allnuts#");
+                pdfDoc.OpenFromMemory(this.decodedPDFPages[decodedPageIndex], (uint)decodedPDFPages[decodedPageIndex].Length, 0);
+                PXCV_Lib36.PXV_CommonRenderParameters commonRenderParam = prepareCommonRenderParameter(pdfDoc, dpi, pg, scal, 0, 0, border, isSinglePage);
+                pdfDoc.DrawPageToDIBSection(IntPtr.Zero, pg, bgColor, commonRenderParam, out bmp);
+                pdfDoc.ReleasePageCachedData(pg, (int)PXCV_Lib36.PXCV_ReleaseCachedDataFlags.pxvrcd_ReleaseDocumentImages);
+                pdfDoc.Delete();
+            }
+            catch (Exception e)
+            {
+                LogTool.Debug(e);
+                //throw e;
+            }
+            //bmp.Save("c:\\Temp\\test.bmp");
+            return bmp;
+        }
+        //將 PDF ren 成 Bitmap (改用Thread的方式ren)
+        private Bitmap renPdfToBitmap(string pageFile, byte[] key, int pg, int dpi, float scal, int decodedPageIndex, Border border, bool isSinglePage)
+        {
+            //Mutex mLoad = new Mutex(requestInitialOwnership, "LoadMutex", out loadMutexWasCreated);
+            //if (!(requestInitialOwnership & loadMutexWasCreated))
+            //{
+            //    mLoad.WaitOne();
+            //}
+
+            System.Drawing.Color bgColor = System.Drawing.Color.White; //背景白色
+            Bitmap bmp = null;
+            if (decodedPDFPages[decodedPageIndex] == null) //如果此頁已經解密過，就直接拿來ren，不用再重新解密一次
+            {
+                try
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        FileStream sourceStream = new FileStream(pageFile, FileMode.Open);
+                        sourceStream.CopyTo(memoryStream);
+                        decodedPDFPages[decodedPageIndex] = memoryStream.ToArray();
+                    }
+                }
+                catch
+                {
+                    return bmp;
+                }
+            }
+
+            try
+            {   //TODO: 改成把PDF實體拉出來變global的
+                PDFDoc pdfDoc = new PDFDoc();
+                pdfDoc.Init("PVD20-M4IRG-QYZK9-MNJ2U-DFTK1-MAJ4L", "PDFX3$Henry$300604_Allnuts#");
+                pdfDoc.OpenFromMemory(decodedPDFPages[decodedPageIndex], (uint)decodedPDFPages[decodedPageIndex].Length, 0);
+                PXCV_Lib36.PXV_CommonRenderParameters commonRenderParam = prepareCommonRenderParameter(pdfDoc, dpi, pg, scal, 0, 0, border, isSinglePage);
+                pdfDoc.DrawPageToDIBSection(IntPtr.Zero, pg, bgColor, commonRenderParam, out bmp);
+                pdfDoc.ReleasePageCachedData(pg, (int)PXCV_Lib36.PXCV_ReleaseCachedDataFlags.pxvrcd_ReleaseDocumentImages);
+                pdfDoc.Delete();
+            }
+            catch (Exception e)
+            {
+                //throw e;
+                LogTool.Debug(e);
+            }
+            //bmp.Save("c:\\Temp\\test.bmp");
+            return bmp;
+        }
+
+        #endregion
+
+        //產生 PDF 元產所需的參數 (改用Thread的方式ren)
+        private PXCV_Lib36.PXV_CommonRenderParameters prepareCommonRenderParameter(PDFDoc pdfDoc, int dpi, int pageNumber, float zoom, int offsetX, int offsetY, Border border, bool isSinglePage)
+        {
+            IntPtr p1 = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(PXCV_Helper.RECT)));
+            IntPtr p2 = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(PXCV_Helper.RECT)));
+            System.Drawing.Point m_Offset = new System.Drawing.Point(offsetX, offsetY);
+            System.Drawing.Size aPageSize = System.Drawing.Size.Empty;
+            PXCV_Helper.RECT aWholePage = new PXCV_Helper.RECT();
+            PXCV_Helper.RECT aDrawRect = new PXCV_Helper.RECT();
+            PXCV_Lib36.PXV_CommonRenderParameters commonRenderParam = new PXCV_Lib36.PXV_CommonRenderParameters();
+            PageDimension aPageDim;
+            pdfDoc.GetPageDimensions(pageNumber, out aPageDim.w, out aPageDim.h);
+
+            //Border bd = border; //可視範圍
+            double borderHeight = (border.ActualHeight / (double)96) * dpi;
+            double borderWidth = (border.ActualWidth / (double)96) * dpi;
+
+            if (zoomStep == 0)
+            {
+                //PDF原尺吋
+                aPageSize.Width = (int)((aPageDim.w / 72.0 * dpi) * zoom);
+                aPageSize.Height = (int)((aPageDim.h / 72.0 * dpi) * zoom);
+
+                double borderRatio = borderWidth / borderHeight;
+                double renderImageRatio = 0;
+
+                if (isSinglePage)
+                {
+                    renderImageRatio = (double)aPageSize.Width / (double)aPageSize.Height;
+                }
+                else
+                {
+                    renderImageRatio = (double)(aPageSize.Width * 2) / (double)aPageSize.Height;
+                }
+
+                if (aPageSize.Width < borderWidth && aPageSize.Height < borderHeight)
+                {   //PDF原尺吋就比canvas還小 --> 貼齊canvas
+                    double newPageW, newPageH;
+                    if (renderImageRatio > borderRatio)
+                    {   //寬先頂到
+                        newPageW = borderWidth / 2;
+                        baseScale = newPageW / (double)aPageSize.Width;
+                        newPageH = Math.Round(baseScale * (double)aPageSize.Height, 2);
+                    }
+                    else
+                    {   //高先頂到
+                        newPageH = borderHeight;
+                        baseScale = newPageH / (double)aPageSize.Height;
+                        newPageW = Math.Round(baseScale * (double)aPageSize.Width, 2);
+                    }
+
+                    aPageSize.Width = (int)newPageW;
+                    aPageSize.Height = (int)newPageH;
+                }
+                else
+                {   //PDF有一邊比canvas還大
+                    double newPageW, newPageH;
+                    if (renderImageRatio > borderRatio)
+                    {   //寬先頂到
+                        newPageW = borderWidth / 2;
+                        baseScale = newPageW / (double)aPageSize.Width;
+                        newPageH = Math.Round(baseScale * (double)aPageSize.Height, 2);
+                    }
+                    else
+                    {   //高先頂到
+                        newPageH = borderHeight;
+                        baseScale = newPageH / (double)aPageSize.Height;
+                        newPageW = Math.Round(baseScale * (double)aPageSize.Width, 2);
+                    }
+
+                    aPageSize.Width = (int)newPageW;
+                    aPageSize.Height = (int)newPageH;
+                }
+            }
+            else
+            {
+                //PDF原尺吋
+                aPageSize.Width = (int)((aPageDim.w / 72.0 * dpi) * zoom * baseScale);
+                aPageSize.Height = (int)((aPageDim.h / 72.0 * dpi) * zoom * baseScale);
+            }
+
+            //Region rgn1 = new Region(new System.Drawing.Rectangle(-m_Offset.X, -m_Offset.Y, aPageSize.Width, aPageSize.Height));
+            //rgn1.Complement(new System.Drawing.Rectangle(0, 0, (int)borderWidth, (int)borderHeight));
+            //rgn1.Complement(new System.Drawing.Rectangle(0, 0, aPageSize.Width, aPageSize.Height));
+            aWholePage.left = -m_Offset.X;
+            aWholePage.top = -m_Offset.Y;
+            aWholePage.right = aWholePage.left + aPageSize.Width;
+            aWholePage.bottom = aWholePage.top + aPageSize.Height;
+
+            //計算要ren的範圍
+            //TODO: 改成部分ren，目前是全ren
+            aDrawRect.left = 0;
+            aDrawRect.top = 0;
+            if (zoomStep == 0)
+            {
+                if (aPageSize.Width < borderWidth)
+                {
+                    aDrawRect.right = aPageSize.Width;
+                }
+                else
+                {
+                    aDrawRect.right = (int)borderWidth;
+                }
+                if (aPageSize.Height < borderHeight)
+                {
+                    aDrawRect.bottom = aPageSize.Height;
+                }
+                else
+                {
+                    aDrawRect.bottom = (int)borderHeight;
+                }
+            }
+            else
+            {
+                aDrawRect.right = aPageSize.Width;
+                aDrawRect.bottom = aPageSize.Height;
+            }
+
+            //aDrawRect.right = aPageSize.Width;
+            //aDrawRect.bottom = aPageSize.Height;
+            Marshal.StructureToPtr(aWholePage, p1, false);
+            Marshal.StructureToPtr(aDrawRect, p2, false);
+            commonRenderParam.WholePageRect = p1;
+            commonRenderParam.DrawRect = p2;
+            commonRenderParam.RenderTarget = PXCV_Lib36.PXCV_RenderMode.pxvrm_Viewing;
+            commonRenderParam.Flags = 0;
+            //System.Drawing.Rectangle rc = new System.Drawing.Rectangle(0, 0, aControlSize.Width, aControlSize.Height);
+            //System.Drawing.Rectangle rc = new System.Drawing.Rectangle(0, 0, aPageSize.Width, aPageSize.Height);
+            //rc.Intersect(new System.Drawing.Rectangle(-m_Offset.X, -m_Offset.Y, aPageSize.Width, aPageSize.Height));
+            //e.DrawRectangle(System.Windows.Media.Brushes.White, null, new Rect(new System.Windows.Size(rc.Width, rc.Height)));
+            //aGraphics.FillRectangle(System.Drawing.Brushes.White, rc);
+            //aGraphics.FillRegion(System.Drawing.Brushes.Gray, rgn1);
+            //rgn1.Dispose();
+
+
+
+            return commonRenderParam;
+        }
+
+        private void getPHEJSingleBitmapImageAsync(CACodecTools caTool, byte[] curKey, string pagePath, float scal, int curPageIndex, Border border, EventHandler<imageSourceRenderedResultEventArgs> ImageSourceRendered, bool isSinglePage)
+        {
+            BitmapImage bitmapImage = new BitmapImage();
+
+            #region Paperless Meeting
+
+
+            Bitmap image;
+            if (curKey!=null && curKey.Length > 1)
+            {
+                //image = renPdfToBitmap(pagePath, curKey, 0, PDFdpi, scal, 0, border, isSinglePage);
+                image = renPdfToBitmap(caTool, pagePath, curKey, 0, PDFdpi, scal, 0, border, isSinglePage);
+            }
+            else
+            {
+                image = renPdfToBitmap(pagePath, curKey, 0, PDFdpi, scal, 0, border, isSinglePage);
+            }
+
+
+            #endregion
+
+            using (MemoryStream memory = new MemoryStream())
+            {
+                try
+                {
+                    image.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
+                    //memory.Position = 0;
+                    bitmapImage.BeginInit();
+                    bitmapImage.StreamSource = memory;
+                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmapImage.EndInit();
+                    bitmapImage.CacheOption = BitmapCacheOption.None;
+                    bitmapImage.StreamSource.Close();
+                    bitmapImage.StreamSource = null;
+                    bitmapImage.Freeze();
+
+
+                    memory.Dispose();
+                    memory.Close();
+                    image.Dispose();
+                    image = null;
+                }
+                catch (Exception ex)
+                {
+                    LogTool.Debug(ex);
+                }
+            }
+            EventHandler<imageSourceRenderedResultEventArgs> imageRenderResult = ImageSourceRendered;
+
+            if (imageRenderResult != null)
+            {
+                imageRenderResult(this, new imageSourceRenderedResultEventArgs(bitmapImage, curPageIndex, scal));
+            }
+        }
+
+        void zoomimageSourceRendered(object sender, imageSourceRenderedResultEventArgs e)
+        {
+            this.resizeImageSourceRendered -= zoomimageSourceRendered;
+
+            isResizing = false;
+            //確定是同一頁, 且為不同倍率才換掉圖片
+            if (leftPageIndex.Equals(e.renderPageIndex))
+            {
+                if (PDFScale.Equals(e.sourceScale))
+                {
+                    EventHandler<imageSourceRenderedResultEventArgs> SendResizeImage = sendresizeImageSourceRendered;
+                    if (SendResizeImage != null)
+                    {
+                        SendResizeImage(sender, e);
+                    }
+                    isRendering = false;
+                    zoomThread.Clear();
+                    zoomStep = 0;
+                    PDFScale = 1F;
+                }
+                else
+                {
+                    for (int i = zoomThread.Count - 1; i >= 0; i--)
+                    {
+                        if (PDFScale.Equals(((float)Convert.ToDouble(zoomThread[i].Name))))
+                        {
+                            try
+                            {
+                                zoomThread[i].Start();
+                                this.resizeImageSourceRendered += zoomimageSourceRendered;
+                                isResizing = true;
+                                break;
+                            }
+                            catch
+                            {
+                                //該Thread執行中, 抓下一個Thread測試
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                isResizing = false;
+                zoomThread.Clear();
+            }
+        }
+
+        void leftimageSourceRendered(object sender, imageSourceRenderedResultEventArgs e)
+        {
+            this.leftImageSourceRendered -= leftimageSourceRendered;
+            if (e.imgSource != null)
+            {
+                this.leftImageSource = e.imgSource;
+                isRendering = false;
+            }
+        }
+
+        void rightimageSourceRendered(object sender, imageSourceRenderedResultEventArgs e)
+        {
+            this.rightImageSourceRendered -= rightimageSourceRendered;
+            if (e.imgSource != null)
+            {
+                this.rightImageSource = e.imgSource;
+                isRendering = false;
+            }
+        }
+
+        private void getPHEJDoubleBitmapImageAsync(CACodecTools caTool, byte[] curKey, string leftPagePath, string rightPagePath, float scal, int curPageIndex, Border border, EventHandler<imageSourceRenderedResultEventArgs> ImageSourceRendered, bool isSinglePage)
+        {
+            BitmapImage bitmapImage = new BitmapImage();
+            Bitmap image1 = null;
+            Bitmap image2 = null;
+            Bitmap bitmap = null;
+            try
+            {
+
+                //雙頁
+                #region Paperless Meeting
+
+                image1 = renPdfToBitmap(leftPagePath, curKey, 0, PDFdpi, scal, 0, border, isSinglePage);
+                image2 = renPdfToBitmap(rightPagePath, curKey, 0, PDFdpi, scal, 1, border, isSinglePage);
+
+                #endregion
+
+
+                int mergeWidth = Convert.ToInt32(image1.Width + image2.Width);
+                int mergeHeight = Convert.ToInt32(Math.Max(image1.Height, image2.Height));
+
+
+                bitmap = new Bitmap(mergeWidth, mergeHeight);
+                using (Graphics g = Graphics.FromImage(bitmap))
+                {
+                    g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                    g.DrawImage(image1, 0, 0, image1.Width, image1.Height);
+                    g.DrawImage(image2, image1.Width, 0, image2.Width, image2.Height);
+                    g.Dispose();
+                }
+
+                using (MemoryStream memory = new MemoryStream())
+                {
+                    bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
+                    //memory.Position = 0;
+                    bitmapImage.BeginInit();
+                    bitmapImage.StreamSource = memory;
+                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmapImage.EndInit();
+                    bitmapImage.CacheOption = BitmapCacheOption.None;
+                    bitmapImage.StreamSource.Close();
+                    bitmapImage.StreamSource = null;
+                    bitmapImage.Freeze();
+
+
+                    memory.Dispose();
+                    memory.Close();
+                    bitmap.Dispose();
+                    bitmap = null;
+                }
+
+                image1 = null;
+                image2 = null;
+            }
+            catch
+            {
+                //處理圖片過程出錯
+                image1 = null;
+                image2 = null;
+                bitmap = null;
+            }
+
+            EventHandler<imageSourceRenderedResultEventArgs> imageRenderResult = ImageSourceRendered;
+
+            if (imageRenderResult != null)
+            {
+                imageRenderResult(this, new imageSourceRenderedResultEventArgs(bitmapImage, curPageIndex, scal));
+            }
+        }
+
+        #endregion
+
+        #region HEJ Reading Page
+
+        private BitmapImage getHEJSingleBitmapImage(CACodecTools caTool, byte[] curKey)
+        {
+            BitmapImage bigBitmapImage = new BitmapImage();
+            try
+            {
+                using (MemoryStream bMapLast = caTool.fileAESDecode(leftImagePath, curKey, false))
+                {
+                    //同時處理單頁以及雙頁資料
+                    //單頁
+                    bigBitmapImage.BeginInit();
+                    bigBitmapImage.StreamSource = bMapLast;
+                    bigBitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                    bigBitmapImage.EndInit();
+                    bigBitmapImage.CacheOption = BitmapCacheOption.None;
+                    bigBitmapImage.StreamSource.Close();
+                    bigBitmapImage.StreamSource = null;
+                    bigBitmapImage.Freeze();
+
+                    bMapLast.Dispose();
+                    bMapLast.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: 萬一檔案解析失敗, 判定為壞檔, 重新下載
+                throw e;
+            }
+            return bigBitmapImage;
+        }
+
+        private BitmapImage getHEJDoubleBitmapImage(CACodecTools caTool, byte[] curKey)
+        {
+            BitmapImage bitmapImage = new BitmapImage();
+            try
+            {
+                using (MemoryStream bMapLeft = caTool.fileAESDecode(leftImagePath, curKey, false))
+                {
+                    using (MemoryStream bMapRight = caTool.fileAESDecode(rightImagePath, curKey, false))
+                    {
+                        //雙頁
+                        System.Drawing.Bitmap image1 = new Bitmap(bMapLeft);
+                        System.Drawing.Bitmap image2 = new Bitmap(bMapRight);
+
+                        int mergeWidth = Convert.ToInt32(image1.Width + image2.Width);
+                        int mergeHeight = Convert.ToInt32(Math.Max(image1.Height, image2.Height));
+
+                        Bitmap bitmap = new Bitmap(mergeWidth, mergeHeight);
+                        using (Graphics g = Graphics.FromImage(bitmap))
+                        {
+                            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                            g.DrawImage(image1, 0, 0, image1.Width, image1.Height);
+                            g.DrawImage(image2, image1.Width, 0, image2.Width, image2.Height);
+                            g.Dispose();
+                        }
+
+                        using (MemoryStream memory = new MemoryStream())
+                        {
+                            bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
+                            //memory.Position = 0;
+                            bitmapImage.BeginInit();
+                            bitmapImage.StreamSource = memory;
+                            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                            bitmapImage.EndInit();
+                            bitmapImage.CacheOption = BitmapCacheOption.None;
+                            bitmapImage.StreamSource.Close();
+                            bitmapImage.StreamSource = null;
+                            bitmapImage.Freeze();
+                            memory.Dispose();
+                            memory.Close();
+                            bitmap.Dispose();
+                            bitmap = null;
+                        }
+
+                        bMapLeft.Dispose();
+                        bMapLeft.Close();
+                        bMapRight.Dispose();
+                        bMapRight.Close();
+                        image1 = null;
+                        image2 = null;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                //TODO: 萬一檔案解析失敗, 判定為壞檔, 重新下載
+                throw e;
+            }
+            return bitmapImage;
+        }
+
+        #endregion
+
+        private byte[] getByteArrayFromImage(BitmapImage imageC)
+        {
+            byte[] data;
+            JpegBitmapEncoder encoder = new JpegBitmapEncoder();
+            if (imageC.UriSource != null)
+            {
+                encoder.Frames.Add(BitmapFrame.Create(imageC.UriSource));
+            }
+            else
+            {
+                encoder.Frames.Add(BitmapFrame.Create(imageC));
+            }
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                encoder.Save(ms);
+                data = ms.ToArray();
+                ms.Close();
+                ms.Dispose();
+                encoder = null;
+                imageC = null;
+                return data;
+            }
+        }
+    }
+
+    public enum ImageStatus
+    {
+        UNKNOWN = 0,
+        SMALLIMAGE = 1,
+        LARGEIMAGE = 2,
+        GENERATING = 3
+    }
+
+    public enum MediaCanvasOpenedBy
+    {
+        None = 0,
+        SearchButton = 1,
+        MediaButton = 2,
+        CategoryButton = 3,
+        NoteButton = 4,
+        ShareButton = 5,
+        SettingButton = 6,
+        PenMemo = 7
+    }
+
+    public enum SharedPlatform
+    {
+        None = 0,
+        Facebook = 1,
+        Plurk = 2,
+        Mail = 3,
+        Google = 4,
+        Twitter = 5
+    }
+
+    public enum PageMode
+    {
+        None = 0,
+        SinglePage = 1,
+        DoublePage = 2
+    }
+
+    //PDF頁面大小
+    public struct PageDimension
+    {
+        public double w;
+        public double h;
+    }
+
+    public class SearchRecord
+    {
+        public int targetPage { get; set; }
+        public string showedPage { get; set; }
+        public string targetLine { get; set; }
+        public string imagePath { get; set; }
+
+        public SearchRecord(string _showedPage, string _targetLine, int _targetPage)
+        {
+            targetPage = _targetPage;
+            targetLine = _targetLine;
+            showedPage = _showedPage;
+        }
+
+    }
+
+    public class ThumbnailImageAndPage : INotifyPropertyChanged
+    {
+        public string pageIndex { get; set; }
+        public string rightImagePath { get; set; }
+        public string leftImagePath { get; set; }
+        public bool _isDownloaded;
+        //public bool IsVisible {get;set;}
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        //public ThumbnailImageAndPage()
+        //{
+        //    IsVisible = true;
+        //}
+        public bool isDownloaded
+        {
+            get
+            {
+                return _isDownloaded;
+            }
+            set
+            {
+                _isDownloaded = value;
+                if (PropertyChanged != null)
+                {
+                    PropertyChanged(this, new PropertyChangedEventArgs("isDownloaded"));
+                }
+            }
+        }
+
+        public ThumbnailImageAndPage(string _pageIndex, string _rightImagePath, string _leftImagePath, bool downloadStatus)
+        {
+            pageIndex = _pageIndex;
+            rightImagePath = _rightImagePath;
+            leftImagePath = _leftImagePath;
+            _isDownloaded = downloadStatus;
+        }
+    }
+
+    public class ShareButton
+    {
+        public string imagePath { get; set; }
+        public string textShown { get; set; }
+        public bool isShareButtonEnabled { get; set; }
+        public SharedPlatform sharePlatForm { get; set; }
+
+        public ShareButton(string _imagePath, string _textShown, SharedPlatform _sharePlatForm, bool _isShareButtonEnabled)
+        {
+            imagePath = _imagePath;
+            textShown = _textShown;
+            sharePlatForm = _sharePlatForm;
+            isShareButtonEnabled = _isShareButtonEnabled;
+        }
+    }
+
+    //將 ren 好PDF event (改用Thread的方式ren)
+    public class imageSourceRenderedResultEventArgs : EventArgs
+    {
+        public BitmapImage imgSource;
+        public int renderPageIndex;
+        public float sourceScale;
+        public imageSourceRenderedResultEventArgs(BitmapImage imgSource, int renderPageIndex, float sourceScale)
+        {
+            this.imgSource = imgSource;
+            this.renderPageIndex = renderPageIndex;
+            this.sourceScale = sourceScale;
+        }
+    }
+}
