@@ -1,0 +1,64 @@
+﻿<UserControl x:Class="PaperLess_Emeeting.FolderListCT"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="768" d:DesignWidth="1024" Background="#fefbf2" >
+    <Grid>
+        <Grid.RowDefinitions >
+            <RowDefinition Height="45"/>
+            <RowDefinition Height="45"/>
+            <RowDefinition />
+            <RowDefinition Height="55"/>
+        </Grid.RowDefinitions>
+        <Grid  Grid.Row="0"   Margin="16,2,16,0">
+            <Grid  Grid.Row="0">
+                <TextBlock x:Name="txtTitle" Grid.Row="0" Grid.Column="0" FontSize="24" Foreground="#FF1C5576"  Text="" TextAlignment="Center" HorizontalAlignment="Center"  VerticalAlignment="Center"/>
+            </Grid>
+         
+            <!--<StackPanel Orientation="Horizontal" HorizontalAlignment="Right"  VerticalAlignment="Center" Margin="0,0,150,8" >
+                <Canvas Width="200">
+                    <TextBox x:Name="txtKeyword" KeyUp="txtKeyword_KeyUp" Padding="15,0,48,0" BorderThickness="0"  Width="200"  FontSize="24" Foreground="#FF1C5576"  TextAlignment="Left" HorizontalAlignment="Left"  VerticalAlignment="Center"  Canvas.Top="-11">
+                        <TextBox.Background>
+                            <ImageBrush ImageSource="images/search_bg.png"/>
+                        </TextBox.Background>
+                    </TextBox>
+                    <Image Width="26" Height="32" Source="images/icon_search@2x.png"  HorizontalAlignment="Right"  VerticalAlignment="Center" Canvas.Left="167" Canvas.Top="-12"/>
+                </Canvas>
+           
+            </StackPanel>-->
+            <!--<StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                <Image x:Name="btnChangeGrid" Width="36" Height="36" Source="image/funcIcon_modeList@2x.png" Margin="0,0,10,0" MouseLeftButtonDown="Image_MouseLeftButtonDown" />
+                <Image x:Name="btnOrder" MouseLeftButtonDown="btnOrder_MouseLeftButtonDown" Width="36" Height="36" Source="image/funcIcon_sortAscending@2x.png" Margin="0,0,10,0"/>
+                <Image Width="36" Height="36" Source="image/funcIcon_addFolder@2x.png"  Margin="0,0,10,0"/>
+            </StackPanel>-->
+        </Grid>
+        <Grid  Grid.Row="1" >
+            <Grid  Width="200" HorizontalAlignment="Left">
+                <Border x:Name="RoomBG" Background="#00A2C2" CornerRadius="0,18,18,0">
+                    
+                </Border>
+            </Grid>
+            <Image Width="20" Height="18"  Margin="10,0,0,0"  Source="image/preicon_folder@2x.png" HorizontalAlignment="Left"  VerticalAlignment="Center" />
+            <TextBlock Margin="35,0,0,0" Visibility="Collapsed" FontSize="16" Foreground="#FFFFFF" HorizontalAlignment="Left"  VerticalAlignment="Center"  Text="檔  案" TextAlignment="Center"/>
+            <TextBlock Margin="38,0,0,0" Foreground="White" x:Name="txtCount" FontSize="20"    Text="" TextAlignment="Center" HorizontalAlignment="Left"  VerticalAlignment="Center"/>
+        </Grid>
+
+        <ScrollViewer Margin="18,15,28,0" x:Name="SV"  Grid.Row="2"     Style="{StaticResource myScrollViewerStyle2}">
+            <StackPanel>
+                <WrapPanel  Background="Transparent"  x:Name="WP">
+                </WrapPanel>
+                <!--<WrapPanel  Background="Transparent" x:Name="WP2">
+                </WrapPanel>-->
+            </StackPanel>
+               
+        </ScrollViewer>
+
+        <Grid Grid.Row="3" Margin="0">
+            <Image  HorizontalAlignment="Right" Margin="0,0,28,0" Cursor="Hand"  Width="42" Height="42" Source="image/funcIcon_addFolder@2x.png" MouseLeftButtonDown="Image_MouseLeftButtonDown_1" />
+        </Grid>
+
+    </Grid>
+
+</UserControl>

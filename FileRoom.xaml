@@ -1,0 +1,56 @@
+﻿<UserControl x:Class="PaperLess_Emeeting.FileRoom"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d"  Margin="12,12,0,0"
+              MouseLeftButtonDown="UserControl_MouseLeftButtonDown">
+    <UserControl.Resources>
+        <Storyboard x:Key="sb" TargetName="txtDownloading" RepeatBehavior="Forever"  Duration="0:0:2.1" AutoReverse="False">
+            <StringAnimationUsingKeyFrames Storyboard.TargetProperty="Text">
+                <DiscreteStringKeyFrame KeyTime="0:0:0" Value="下載中." />
+                <DiscreteStringKeyFrame KeyTime="0:0:0.7" Value="下載中.." />
+                <DiscreteStringKeyFrame KeyTime="0:0:1.4" Value="下載中..." />
+            </StringAnimationUsingKeyFrames>
+        </Storyboard>
+        <Storyboard x:Key="sb2" TargetName="txtUnZip" RepeatBehavior="Forever"  Duration="0:0:2.1" AutoReverse="False">
+            <StringAnimationUsingKeyFrames Storyboard.TargetProperty="Text">
+                <DiscreteStringKeyFrame KeyTime="0:0:0" Value="解壓縮中." />
+                <DiscreteStringKeyFrame KeyTime="0:0:0.7" Value="解壓縮中.." />
+                <DiscreteStringKeyFrame KeyTime="0:0:1.4" Value="解壓縮中..." />
+            </StringAnimationUsingKeyFrames>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid  Height="150" Width="306" Background="#DAF2F3">
+        <Grid>
+            <Grid HorizontalAlignment="Left" VerticalAlignment="Top" >
+                <!--<Image  Margin="10"  Width="42" Height="42" Source="image/forderMore@2x.png"  />-->
+                <TextBlock  x:Name="txtName" Text="" Margin="12,10,12,0" TextWrapping="Wrap"  FontSize="16" FontWeight="Bold"  />
+            </Grid>
+
+            <Grid>
+                <Grid>
+                    <Image  Stretch="Uniform" Visibility="Collapsed" x:Name="imgCover2" Margin="32,35,0,34" Source="images/icon_download@2x.png" HorizontalAlignment="Left"  Width="60" Height="60"  />
+                    <TextBlock  x:Name="txtView" Visibility="Collapsed" Text="瀏覽過期" Margin="22,95,0,-6"  TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="18" FontWeight="Bold"    Width="155" Height="40" />
+                    <TextBlock  x:Name="txtDownloading" Visibility="Collapsed"  Text="" Margin="22,50,0,14"  TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Center"  FontSize="18" FontWeight="Bold"    Width="155" Height="40" />
+                    <TextBlock  x:Name="txtUnZip" Visibility="Collapsed"  Text="" Margin="22,50,0,14"  TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Center"  FontSize="18" FontWeight="Bold"    Width="155" Height="40" />
+                    <TextBlock  x:Name="txtDownload" Visibility="Collapsed"  Text="下載過期" Margin="22,95,0,-6"  TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Center"  FontSize="18" FontWeight="Bold"    Width="155" Height="40" />
+                    <Image  Stretch="Fill" MouseLeftButtonDown="imgCover_MouseLeftButtonDown" x:Name="imgCover" Margin="12,0,0,-36" Source="images/icon_download@2x.png" HorizontalAlignment="Left"  Width="90" Height="90"  />
+                </Grid>
+                <StackPanel HorizontalAlignment="Left" Margin="105,42,0,0">
+                    <TextBlock x:Name="txtTime" FontSize="16" TextWrapping="Wrap"    HorizontalAlignment="Left"  TextAlignment="Left" Margin="10,16,0,0"  />
+                    <TextBlock x:Name="txtLocation" FontSize="14"  TextWrapping="Wrap"    Width="{Binding ActualWidth, ElementName=grid}" TextAlignment="Left" Padding="10,15,47,0"  />
+                </StackPanel>
+                <Grid VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal">
+                        <!--<Image  Margin="10,10,5,10" Source="image/funcIcon_rename@2x.png"   Width="42" Height="42"  />-->
+                        <Image  Margin="5,10,10,10" Source="images/icon_delete@2x.png"   Width="42" Height="42" MouseLeftButtonDown="Image_MouseLeftButtonDown"  />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+
+
+    </Grid>
+</UserControl>

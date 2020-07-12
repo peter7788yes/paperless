@@ -1,0 +1,41 @@
+﻿<Window x:Class="PaperLess_Emeeting.DelFolder"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+           Height="240" Width="320" WindowStyle="ToolWindow" >
+    <Grid>
+        <Grid.Background>
+            <ImageBrush Stretch="None"  ImageSource="images/login_bg@2x.png"/>
+        </Grid.Background>
+
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="55"/>
+        </Grid.RowDefinitions>
+        
+        <StackPanel>
+            <TextBlock Grid.Row="0" Text="移除資料夾" VerticalAlignment="Center" HorizontalAlignment="Center" x:Name="txtQuest" Margin="10,20,10,3" FontSize="28"  />
+            <TextBlock Grid.Row="0" Text="" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" x:Name="txtQuest2" Margin="10,20,10,3" FontSize="16"  />
+        </StackPanel>
+       
+            <StackPanel  Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Grid Margin="10" x:Name="btnNO" >
+                <Grid  Width="96" Height="40"  HorizontalAlignment="Left">
+                    <Border  Background="#00A2C2" CornerRadius="4">
+
+                    </Border>
+                </Grid>
+                <TextBlock   FontSize="16" Foreground="#FFFFFF" HorizontalAlignment="Center"  VerticalAlignment="Center"  Text="取消" TextAlignment="Center"/>
+            </Grid>
+            <Grid Margin="10" x:Name="btnYes" >
+                <Grid  Width="96" Height="40"  >
+                    <Border Background="#00A2C2" CornerRadius="4">
+
+                    </Border>
+                </Grid>
+                <TextBlock   FontSize="16" Foreground="#FFFFFF" HorizontalAlignment="Center"  VerticalAlignment="Center"  Text="移除" TextAlignment="Center"/>
+            </Grid>
+            <!--<Image ToolTip="取消" x:Name="btnNO" Source="images/sign-btn-clear@2x.png" Margin="5,0,5,5"  Width="48" Height="48"/>
+            <Image ToolTip="確定" x:Name="btnYes" Source="images/sign-btn-ok@2x.png"  Margin="5,0,5,5" Width="48" Height="48" />-->
+            </StackPanel>
+    </Grid>
+</Window>
