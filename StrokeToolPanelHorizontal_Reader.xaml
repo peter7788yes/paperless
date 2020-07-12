@@ -1,0 +1,196 @@
+﻿<UserControl x:Class="PaperLess_Emeeting.StrokeToolPanelHorizontal_Reader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d"  x:Name="mainPanel" Width="240" Height="30"
+             d:DesignHeight="30" d:DesignWidth="240">
+    <UserControl.Resources>
+        <Style x:Key="ButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{x:Null}"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ButtonBase">
+                        <Border Background="{TemplateBinding Background}" Uid="Border_39">
+                            <ContentPresenter x:Name="Content" ContentTemplate="{TemplateBinding ContentTemplate}" Content="{TemplateBinding Content}" ContentStringFormat="{TemplateBinding ContentStringFormat}" RenderTransformOrigin="0.5,0.5" Uid="ContentPresenter_2"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="RenderTransform" TargetName="Content">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleY="1.0" ScaleX="1.0"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="RenderTransform" TargetName="Content">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleY="0.9" ScaleX="0.9"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+        <!--undo redo panel-->
+        <Grid Grid.Column="0" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" Content="{Binding up, Source={StaticResource Resources}}" x:Name="undoButton" Height="20" Margin="5"  Uid="SPanelCheck" Opacity="0.5"  Click="undoButtonClick" />
+            <Button Grid.Column="1" Content="{Binding down, Source={StaticResource Resources}}" x:Name="redoButton" Height="20" Margin="5"  Uid="SPanelCheck" Opacity="0.5"  Click="redoButtonClick" />
+        </Grid>
+        <Grid Grid.Column="1">
+            <Grid >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" ToolTip="{Binding stroke, Source={StaticResource Resources}}" x:Name="penButton" Click="penButtonClick" Style="{StaticResource ButtonStyle}">
+                    <Button.Content>
+                        <Image Source="images/mainWindow/05.png" Height="20" Width="30"></Image>
+                    </Button.Content>
+                </Button>
+                <Popup x:Name="penTypePopup">
+                    <Border BorderBrush="Black" BorderThickness="5" CornerRadius="5">
+                        <Grid x:Name="penSubPanelGrid" Background="White">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" x:Name="curveButton" Click="curveButtonClick" ToolTip="{Binding curve, Source={StaticResource Resources}}" Margin="5,6,5,5" Style="{StaticResource ButtonStyle}">
+                                <Button.Content>
+                                    <Image Source="images/mainWindow/05.png" Height="20" Width="30"></Image>
+                                </Button.Content>
+                            </Button>
+                            <Button Grid.Column="1" x:Name="straightPanelButton" Click="LineButtonClick" Opacity="0.5" Margin="5,6,5,5"  ToolTip="straight" Style="{StaticResource ButtonStyle}" >
+                                <Button.Content>
+                                    <Image Source="images/mainWindow/06.png" Height="20" Width="30"></Image>
+                                </Button.Content>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Popup>
+                <Button Grid.Column="1"  x:Name="colorPanelButton" Click="colorPanelButtonClick"  Uid="SPanelCheck" Opacity="0.5" ToolTip="{Binding palette, Source={StaticResource Resources}}" Style="{StaticResource ButtonStyle}" >
+                    <Button.Content>
+                        <Image Source="images/mainWindow/02.png" Width="30"/>
+                    </Button.Content>
+                </Button>
+                <Popup x:Name="colorPopup">
+                    <Border Width="300" Height="200" BorderBrush="Black" BorderThickness="5" CornerRadius="5">
+                        <Grid Background="White">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" x:Name="penToolPanelGrid">
+                                <StackPanel Orientation="Vertical">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button x:Name="transparentButton" Click="transparentButton_Click" ToolTip="{Binding transparent, Source={StaticResource Resources}}" Style="{StaticResource ButtonStyle}" >
+                                            <Button.Content>
+                                                <Image Source="images/mainWindow/Transparent.png" Height="20" Width="60"></Image>
+                                            </Button.Content>
+                                        </Button>
+                                        <Button ToolTip="{Binding opaque, Source={StaticResource Resources}}" x:Name="nonTransparentButton" Click="nonTransparentButton_Click" Opacity="0.5" Style="{StaticResource ButtonStyle}">
+                                            <Button.Content>
+                                                <Image Source="images/mainWindow/NonTransparent.png" Height="20" Width="60"></Image>
+                                            </Button.Content>
+                                        </Button>
+                                    </StackPanel>
+                                    <Path x:Name="demoStroke" Stroke="#FFD13030" StrokeThickness="1" Data="M 10,10 T 80,40 90,60 140,90" Height="100" />
+                                    <TextBlock Text="{Binding thickness, Source={StaticResource Resources}}"/>
+                                    <Slider Minimum="1" Maximum="12" x:Name="strokeWidthSlider" ValueChanged="strokeHeight_ValueChanged"   SmallChange="1" IsSnapToTickEnabled="True"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid Grid.Column="1"  x:Name="colorPanel">
+                                <Grid Height="150">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="35"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Row="0" Grid.Column="0" Tag="red"  Click="setColor" Margin="5" Background="#FF000000"></Button>
+                                    <Button Grid.Row="0" Grid.Column="1" Tag="gray" Click="setColor" Margin="5" Background="#FF989898"></Button>
+                                    <Button Grid.Row="0" Grid.Column="2" Tag="blue" Click="setColor" Margin="5" Background="#FFc0c0c0"></Button>
+                                    <Button Grid.Row="0" Grid.Column="3" Tag="blue" Click="setColor" Margin="5" Background="#FFFFFFFF"></Button>
+                                    <Button Grid.Row="1" Grid.Column="0" Tag="red"  Click="setColor" Margin="5" Background="#FFFF0000"></Button>
+                                    <Button Grid.Row="1" Grid.Column="1" Tag="gray" Click="setColor" Margin="5" Background="#FF02Fe41"></Button>
+                                    <Button Grid.Row="1" Grid.Column="2" Tag="blue" Click="setColor" Margin="5" Background="#FF202bFa"></Button>
+                                    <Button Grid.Row="1" Grid.Column="3" Tag="blue" Click="setColor" Margin="5" Background="#FFFDFC39"></Button>
+                                    <Button Grid.Row="2" Grid.Column="0" Tag="red"  Click="setColor" Margin="5" Background="#FF00ffff"></Button>
+                                    <Button Grid.Row="2" Grid.Column="1" Tag="gray" Click="setColor" Margin="5" Background="#FFff17f9"></Button>
+                                    <Button Grid.Row="2" Grid.Column="2" Tag="blue" Click="setColor" Margin="5" Background="#FF6f8f8f"></Button>
+                                    <Button Grid.Row="2" Grid.Column="3" Tag="blue" Click="setColor" Margin="5" Background="#FF0664a1"></Button>
+                                    <Button Grid.Row="3" Grid.Column="0" Tag="red"  Click="setColor" Margin="5" Background="#FF51425b"></Button>
+                                    <Button Grid.Row="3" Grid.Column="1" Tag="gray" Click="setColor" Margin="5" Background="#FF5f3e30"></Button>
+                                    <Button Grid.Row="3" Grid.Column="2" Tag="blue" Click="setColor" Margin="5" Background="#FFfa5e53"></Button>
+                                    <Button Grid.Row="3" Grid.Column="3" Tag="blue" Click="setColor" Margin="5" Background="#FF5a7d50"></Button>
+                                    <Button Grid.Row="4" Grid.Column="0" Tag="red"  Click="setColor" Margin="5" Background="#FFbb1b67"></Button>
+                                    <Button Grid.Row="4" Grid.Column="1" Tag="gray" Click="setColor" Margin="5" Background="#FF23a9fa"></Button>
+                                    <Button Grid.Row="4" Grid.Column="2" Tag="blue" Click="setColor" Margin="5" Background="#FF827815"></Button>
+                                    <Button Grid.Row="4" Grid.Column="3" Tag="blue" Click="setColor" Margin="5" Background="#FFa87d84"></Button>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Popup>
+                <Button Grid.Column="2"  x:Name="eraserButton" Height="20" Margin="5" Uid="SPanelCheck"  Opacity="0.5" Click="eraserButtonClick" ToolTip="{Binding eraser, Source={StaticResource Resources}}" BorderBrush="{x:Null}" >
+                    <Button.Background>
+                        <ImageBrush ImageSource="images/mainWindow/03.png"/>
+                    </Button.Background>
+                    <Button.Template>
+                        <ControlTemplate>
+                            <Grid x:Name="bg">
+                                <Image Source="images/mainWindow/03.png"></Image>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter  TargetName="bg" Property="Background" Value="White" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+
+                </Button>
+                <Button Grid.Column="3" Content="{Binding delete, Source={StaticResource Resources}}" x:Name="deleteAllButton" Height="20" Margin="5"  Uid="SPanelCheck" Opacity="0.5"  Click="deleteAllButtonClick"  ToolTip="{Binding delAllStrokes, Source={StaticResource Resources}}" BorderBrush="{x:Null}" >
+                    <Button.Background>
+                        <ImageBrush ImageSource="images/mainWindow/04.png"/>
+                    </Button.Background>
+                    <Button.Template>
+                        <ControlTemplate>
+                            <Grid x:Name="bg">
+                                <Image Source="images/mainWindow/04.png"></Image>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter  TargetName="bg" Property="Background" Value="White" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

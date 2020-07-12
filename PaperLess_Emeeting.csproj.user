@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PublishUrlHistory>C:\Users\haipu\Desktop\Taichung\|C:\Users\haipu\Desktop\|D:\%281%29專案\無紙化系統\Publish\461\|D:\%281%29專案\無紙化系統\Publish\460\|D:\%281%29專案\無紙化系統\Publish\ARI\Release\457\</PublishUrlHistory>
+    <InstallUrlHistory>http://paperless.taichung.gov.tw/AppWindows/|http://meeting.moe.gov.tw/PaperLess_Emeeting_PC/|http://paperless.taichung.hyweb.com.tw/AppWindows/|http://web.eduemeeting.hyweb.com.tw/PaperLess_Emeeting_PC/|http://web.emeeting.archives.hyweb.com.tw/PaperLess_Emeeting_PC/</InstallUrlHistory>
+    <SupportUrlHistory>http://paperless.taichung.hyweb.com.tw/|http://meeting.moe.gov.tw|http://web.eduemeeting.hyweb.com.tw|http://web.emeeting.archives.hyweb.com.tw/PaperLess_Emeeting_PC/|http://emeeting.archives.gov.tw/PaperLess_Emeeting_PC/</SupportUrlHistory>
+    <UpdateUrlHistory>http://paperless.taichung.hyweb.com.tw/AppWindows/|http://meeting.moe.gov.tw/PaperLess_Emeeting_PC/|http://web.eduemeeting.hyweb.com.tw/PaperLess_Emeeting_PC/|http://web.emeeting.archives.hyweb.com.tw/PaperLess_Emeeting_PC/|http://emeeting.archives.gov.tw/PaperLess_Emeeting_PC/</UpdateUrlHistory>
+    <BootstrapperUrlHistory>http://emeeting.archives.gov.tw/PaperLess_Emeeting_PC/|http://paperless.taichung.hyweb.com.tw/AppWindows/|\\10.10.25.161\AppWindows|http://paperless.taichung.gov.tw/AppWindows/|http://paperless.intra.nhi.gov.tw/AppWindows/</BootstrapperUrlHistory>
+    <ErrorReportUrlHistory />
+    <FallbackCulture>zh-TW</FallbackCulture>
+    <VerifyUploadedFiles>false</VerifyUploadedFiles>
+    <ProjectView>ShowAllFiles</ProjectView>
+  </PropertyGroup>
+  <PropertyGroup>
+    <EnableSecurityDebugging>false</EnableSecurityDebugging>
+  </PropertyGroup>
+</Project>

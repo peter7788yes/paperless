@@ -1,0 +1,38 @@
+﻿<Window x:Class="PaperLess_Emeeting.JoinFolder"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+           Height="640" Width="480" WindowStyle="ToolWindow" >
+    <Grid>
+        <Grid.Background>
+            <ImageBrush Stretch="None"  ImageSource="images/login_bg@2x.png"/>
+        </Grid.Background>
+
+        <Grid.RowDefinitions>
+            <RowDefinition  Height="48"/>
+            <RowDefinition  Height="48"/>
+            <RowDefinition />
+            <RowDefinition Height="54"/>
+            <RowDefinition Height="48"/>
+        </Grid.RowDefinitions>
+        <Grid Background="Gray">
+            <TextBlock Grid.Row="0" Text="檔案收藏" VerticalAlignment="Center" HorizontalAlignment="Center" x:Name="txtQuest"  FontSize="28"  />
+            <Image Source="images/thumb-search-clear@2x.png" Cursor="Hand" MouseLeftButtonDown="Image_MouseLeftButtonDown" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="16,0,16,0" Width="32" Height="32"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Background="LightGray">
+            <TextBlock Grid.Row="0" Text="資料夾名稱" Margin="15,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left"   FontSize="26"  />
+        </Grid>
+
+        <ScrollViewer  x:Name="SV"  Grid.Row="2"     Style="{StaticResource myScrollViewerStyle2}">
+            <StackPanel x:Name="SP"  Background="Transparent" Margin="20">
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid  Grid.Row="3" Margin="16,0,16,3">
+            <Image  HorizontalAlignment="Right" Cursor="Hand"  Width="40" Height="40" Source="image/funcIcon_addFolder@2x.png" MouseLeftButtonDown="Image_MouseLeftButtonDown_1"  />
+        </Grid>
+        <Grid  Grid.Row="4" Background="Gray" MouseLeftButtonDown="Grid_MouseLeftButtonDown">
+            <TextBlock x:Name="txtCount" FontSize="24" Foreground="#FFFFFF"   Text="加到這裡" TextAlignment="Center" HorizontalAlignment="Center"  VerticalAlignment="Center"/>
+        </Grid>
+    </Grid>
+</Window>

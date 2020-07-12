@@ -1,0 +1,40 @@
+﻿<Window x:Class="PaperLess_Emeeting.Home"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Home" Width="1024" Height="640">
+    <Grid >
+        <Grid.ColumnDefinitions >
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions >
+            <RowDefinition x:Name="Row1" Height="85" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <Image x:Name="imgBeta" Grid.Row="0"  Panel.ZIndex="3" Visibility="Collapsed" Source="images/beta.png" Width="83" Height="83" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        <!--Height="85"-->
+        <DockPanel Grid.Row="0" x:Name="DP1" Height="{Binding ElementName=Row1, Path=ActualWidth}" Panel.ZIndex="2"  Width="{Binding ElementName=dp, Path=ActualWidth}" LastChildFill="True">
+            <DockPanel.Background>
+                    <ImageBrush ImageSource="images/tabBarBg@2x.png" Stretch="Fill" />
+            </DockPanel.Background>
+
+            <Image x:Name="imgLogo" Margin="5" Width="260" Height="65"   HorizontalAlignment="Left" VerticalAlignment="Top"  />
+
+                <Grid Margin="-5" x:Name="blockUserName" Visibility="Collapsed">
+                    <TextBlock  Name="txtUserName" Panel.ZIndex="99"  TextAlignment="Center"  Padding="0,8,0,6"  FontSize="16" Height="auto" Width="110" VerticalAlignment="Top"  />
+                    <Rectangle  RadiusX="6" RadiusY="6" Width="{Binding Width,ElementName=txtUserName}" Height="{Binding ActualHeight,ElementName=txtUserName}" Stroke="White" Fill="White" Opacity=".8" StrokeThickness="3" VerticalAlignment="Top"   />
+                </Grid>
+                <StackPanel Margin="0,0,10,0" x:Name="btnSP" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" >
+                   
+                </StackPanel>
+           
+        </DockPanel>
+
+
+        <DockPanel Grid.Row="1" Panel.ZIndex="1" >
+            <DockPanel.Background>
+                <ImageBrush ImageSource="images/home_bg@2x.png"/>
+            </DockPanel.Background>
+            <ContentControl x:Name="CC"/>
+        </DockPanel>
+    </Grid>
+</Window>
